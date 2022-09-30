@@ -119,6 +119,8 @@ gnugo_play_move(int move, int color)
   play_move(move, color);
 #endif
   clock_push_button(color);
+
+    // showboard(0);
 }
 
 
@@ -209,6 +211,8 @@ void
 gameinfo_clear(Gameinfo *gameinfo)
 {
   gnugo_clear_board(board_size);
+  gameinfo->board_size = DEFAULT_BOARD_SIZE;
+  gameinfo->passes = 0;
   gameinfo->handicap = 0;
   gameinfo->to_move = BLACK;
   sgftree_clear(&gameinfo->game_record);

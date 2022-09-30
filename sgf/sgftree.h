@@ -55,7 +55,7 @@ void *xalloc(unsigned int);
 typedef struct SGFProperty_t {
   struct SGFProperty_t *next;
   short name;
-  char *value;
+  const char *value;
 } SGFProperty;
 
     

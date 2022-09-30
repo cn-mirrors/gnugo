@@ -42,6 +42,8 @@
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>
+#include <clock.h>
+#include <liberty.h>
 
 #include "gtp.h"
 
@@ -69,12 +71,34 @@ static gtp_transform_ptr vertex_transform_output_hook = NULL;
  */
 static int current_id;
 
+static int report_uncertainty = 0;
+static int gtp_orientation = 0;
+
 /* The file all GTP output goes to.  This is made global for the user
  * of this file may want to use functions other than gtp_printf() etc.
  * Set by gtp_main_loop().
  */
 FILE *gtp_output_file = NULL;
 
+void
+gtp_init(int bsize, int gtp_initial_orientation){
+    FILE* gtp_output = stdout; // fopen(stdout, "a");
+    gtp_output_file = gtp_output;
+
+    board_size = bsize;
+    /* Inform the GTP utility functions about the board size. */
+    gtp_internal_set_boardsize(board_size);
+    gtp_orientation = gtp_initial_orientation;
+    gtp_set_vertex_transform_hooks(rotate_on_input, rotate_on_output);
+
+    /* Initialize time handling. */
+    init_timers();
+
+    /* Prepare pattern matcher and reading code. */
+    reset_engine();
+    clearstats();
+
+}
 
 /* Read filehandle gtp_input linewise and interpret as GTP commands. */
 void

@@ -490,9 +490,9 @@ simple_showboard(FILE *outfile)
     
     for (j = 0; j < board_size; j++) {
       if (BOARD(i, j) == EMPTY)
-	fprintf(outfile, " %c", is_hoshi_point(i, j) ? '+' : '.');
+	    fprintf(outfile, " %c", is_hoshi_point(i, j) ? '+' : '.');
       else
-	fprintf(outfile, " %c", BOARD(i, j) == BLACK ? 'X' : 'O');
+	    fprintf(outfile, " %c", BOARD(i, j) == BLACK ? 'X' : 'O');
     }
 
     fprintf(outfile, " %d", board_size - i);

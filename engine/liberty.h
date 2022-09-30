@@ -536,7 +536,7 @@ void summon_oracle(void);
 void oracle_loadsgf(char *infilename, char *untilstring);
 int oracle_threatens(int move, int target);
 int within_search_area(int pos);
-int metamachine_genmove(int color, float *value);
+int metamachine_genmove(int color, float *value, int limit_search);
 void draw_search_area(void);
 
 int genmove_restricted(int color, int allowed_moves[BOARDMAX]);
@@ -859,8 +859,8 @@ struct worm_data {
 extern struct worm_data worm[BOARDMAX];
 
 /* Unconditionally meaningless moves. */
-int meaningless_black_moves[BOARDMAX];
-int meaningless_white_moves[BOARDMAX];
+extern int meaningless_black_moves[BOARDMAX];
+extern int meaningless_white_moves[BOARDMAX];
 
 /* Surround cache (see surround.c) */
 

@@ -542,6 +542,8 @@ unconditional_life(int unconditional_territory[BOARDMAX], int color)
   }
 }
 
+ int meaningless_black_moves[BOARDMAX] = {};
+ int meaningless_white_moves[BOARDMAX] = {};
 
 /* By unconditional status analysis we can statically find some moves
  * which there is never any need to play. Those belong to three

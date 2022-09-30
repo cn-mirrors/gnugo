@@ -36,7 +36,7 @@
    && defined(ENABLE_SOCKET_SUPPORT))
 
 
-#if USE_WINDOWS_SOCKET_CLUDGE
+#if defined(_WIN32) // && USE_WINDOWS_SOCKET_CLUDGE
 
 
 #include <stdarg.h>

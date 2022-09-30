@@ -36,7 +36,7 @@
 int thrashing_dragon = NO_MOVE; /* Dead opponent's dragon trying to live. */
 signed char thrashing_stone[BOARDMAX]; /* All thrashing stones. */
 
-float potential_moves[BOARDMAX];
+float potential_moves[BOARDMAX] = {0};
 
 /* Used by reading. */
 int depth;              /* deep reading cut off */

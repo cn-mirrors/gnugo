@@ -2366,14 +2366,14 @@ next_worm_in_dragon(int w)
  * the dragon structure to the external program.
  */
 
-enum dragon_status
+int /*enum dragon_status*/
 crude_status(int pos)
 {
   return dragon[pos].crude_status;
 }
 
 
-enum dragon_status
+int /*enum dragon_status*/
 dragon_status(int pos)
 {
   return dragon[pos].status;

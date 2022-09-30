@@ -102,6 +102,8 @@ typedef struct {
   int to_move;		/* whose move it currently is */
   SGFTree game_record;	/* Game record in sgf format. */
   int computer_player;	/* BLACK, WHITE, or EMPTY (used as BOTH) */
+  int board_size;
+  int passes;
 } Gameinfo;
 
 void gameinfo_clear(Gameinfo *ginfo);
@@ -343,8 +345,8 @@ void compute_worm_influence(void);
 void make_dragons(int stop_before_owl);
 void initialize_dragon_data(void);
 void show_dragons(void);
-enum dragon_status crude_status(int pos);
-enum dragon_status dragon_status(int pos);
+int /*enum dragon_status*/ crude_status(int pos);
+int /*enum dragon_status*/ dragon_status(int pos);
 int same_dragon(int dr1, int dr2);
 
 /* debugging functions */

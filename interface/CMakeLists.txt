@@ -16,6 +16,7 @@ SET(gnugo_SRCS
     )
 
 ADD_EXECUTABLE(gnugo ${gnugo_SRCS})
+ADD_LIBRARY(libgnugo STATIC ${gnugo_SRCS})
 
 IF(WIN32)
     SET(PLATFORM_LIBRARIES wsock32)

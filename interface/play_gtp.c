@@ -34,153 +34,6 @@
 #include "gtp.h"
 #include "gg_utils.h"
 
-/* Internal state that's not part of the engine. */
-static int report_uncertainty = 0;
-static int gtp_orientation = 0;
-
-static void gtp_print_code(int c);
-static void gtp_print_vertices2(int n, int *moves);
-static void rotate_on_input(int ai, int aj, int *bi, int *bj);
-static void rotate_on_output(int ai, int aj, int *bi, int *bj);
-
-
-#define DECLARE(func) static int func(char *s)
-
-DECLARE(gtp_aa_confirm_safety);
-DECLARE(gtp_accurate_approxlib);
-DECLARE(gtp_accuratelib);
-DECLARE(gtp_advance_random_seed);
-DECLARE(gtp_all_legal);
-DECLARE(gtp_all_move_values);
-DECLARE(gtp_analyze_eyegraph);
-DECLARE(gtp_analyze_semeai);
-DECLARE(gtp_analyze_semeai_after_move);
-DECLARE(gtp_attack);
-DECLARE(gtp_attack_either);
-DECLARE(gtp_block_off);
-DECLARE(gtp_break_in);
-DECLARE(gtp_captures);
-DECLARE(gtp_clear_board);
-DECLARE(gtp_clear_cache);
-DECLARE(gtp_combination_attack);
-DECLARE(gtp_combination_defend);
-DECLARE(gtp_connect);
-DECLARE(gtp_countlib);
-DECLARE(gtp_cputime);
-DECLARE(gtp_decrease_depths);
-DECLARE(gtp_defend);
-DECLARE(gtp_defend_both);
-DECLARE(gtp_disconnect);
-DECLARE(gtp_does_attack);
-DECLARE(gtp_does_defend);
-DECLARE(gtp_does_surround);
-DECLARE(gtp_dragon_data);
-DECLARE(gtp_dragon_status);
-DECLARE(gtp_dragon_stones);
-DECLARE(gtp_draw_search_area);
-DECLARE(gtp_dump_stack);
-DECLARE(gtp_echo);
-DECLARE(gtp_echo_err);
-DECLARE(gtp_estimate_score);
-DECLARE(gtp_eval_eye);
-DECLARE(gtp_experimental_score);
-DECLARE(gtp_eye_data);
-DECLARE(gtp_final_score);
-DECLARE(gtp_final_status);
-DECLARE(gtp_final_status_list);
-DECLARE(gtp_findlib);
-DECLARE(gtp_finish_sgftrace);
-DECLARE(gtp_fixed_handicap);
-DECLARE(gtp_followup_influence);
-DECLARE(gtp_genmove);
-DECLARE(gtp_genmove_black);
-DECLARE(gtp_genmove_white);
-DECLARE(gtp_get_connection_node_counter);
-DECLARE(gtp_get_handicap);
-DECLARE(gtp_get_komi);
-DECLARE(gtp_get_life_node_counter);
-DECLARE(gtp_get_owl_node_counter);
-DECLARE(gtp_get_random_seed);
-DECLARE(gtp_get_reading_node_counter);
-DECLARE(gtp_get_trymove_counter);
-DECLARE(gtp_gg_genmove);
-DECLARE(gtp_gg_undo);
-DECLARE(gtp_half_eye_data);
-DECLARE(gtp_increase_depths);
-DECLARE(gtp_initial_influence);
-DECLARE(gtp_invariant_hash);
-DECLARE(gtp_invariant_hash_for_moves);
-DECLARE(gtp_is_legal);
-DECLARE(gtp_is_surrounded);
-DECLARE(gtp_kgs_genmove_cleanup);
-DECLARE(gtp_known_command);
-DECLARE(gtp_ladder_attack);
-DECLARE(gtp_last_move);
-DECLARE(gtp_limit_search);
-DECLARE(gtp_list_commands);
-DECLARE(gtp_list_stones);
-DECLARE(gtp_loadsgf);
-DECLARE(gtp_move_influence);
-DECLARE(gtp_move_probabilities);
-DECLARE(gtp_move_reasons);
-DECLARE(gtp_move_uncertainty);
-DECLARE(gtp_move_history);
-DECLARE(gtp_name);
-DECLARE(gtp_owl_attack);
-DECLARE(gtp_owl_connection_defends);
-DECLARE(gtp_owl_defend);
-DECLARE(gtp_owl_does_attack);
-DECLARE(gtp_owl_does_defend);
-DECLARE(gtp_owl_substantial);
-DECLARE(gtp_owl_threaten_attack);
-DECLARE(gtp_owl_threaten_defense);
-DECLARE(gtp_place_free_handicap);
-DECLARE(gtp_play);
-DECLARE(gtp_playblack);
-DECLARE(gtp_playwhite);
-DECLARE(gtp_popgo);
-DECLARE(gtp_printsgf);
-DECLARE(gtp_program_version);
-DECLARE(gtp_protocol_version);
-DECLARE(gtp_query_boardsize);
-DECLARE(gtp_query_orientation);
-DECLARE(gtp_quit);
-DECLARE(gtp_reg_genmove);
-DECLARE(gtp_report_uncertainty);
-DECLARE(gtp_reset_connection_node_counter);
-DECLARE(gtp_reset_life_node_counter);
-DECLARE(gtp_reset_owl_node_counter);
-DECLARE(gtp_reset_reading_node_counter);
-DECLARE(gtp_reset_search_mask);
-DECLARE(gtp_reset_trymove_counter);
-DECLARE(gtp_restricted_genmove);
-DECLARE(gtp_same_dragon);
-DECLARE(gtp_set_boardsize);
-DECLARE(gtp_set_free_handicap);
-DECLARE(gtp_set_komi);
-DECLARE(gtp_set_level);
-DECLARE(gtp_set_orientation);
-DECLARE(gtp_set_random_seed);
-DECLARE(gtp_set_search_diamond);
-DECLARE(gtp_set_search_limit);
-DECLARE(gtp_showboard);
-DECLARE(gtp_start_sgftrace);
-DECLARE(gtp_surround_map);
-DECLARE(gtp_test_eyeshape);
-DECLARE(gtp_time_left);
-DECLARE(gtp_time_settings);
-DECLARE(gtp_top_moves);
-DECLARE(gtp_top_moves_black);
-DECLARE(gtp_top_moves_white);
-DECLARE(gtp_tryko);
-DECLARE(gtp_trymove);
-DECLARE(gtp_tune_move_ordering);
-DECLARE(gtp_unconditional_status);
-DECLARE(gtp_undo);
-DECLARE(gtp_what_color);
-DECLARE(gtp_worm_cutstone);
-DECLARE(gtp_worm_data);
-DECLARE(gtp_worm_stones);
 
 /* List of known commands. */
 static struct gtp_command commands[] = {
@@ -337,17 +190,19 @@ play_gtp(FILE *gtp_input, FILE *gtp_output, FILE *gtp_dump_commands,
    */
   setbuf(gtp_output, NULL);
 
-  /* Inform the GTP utility functions about the board size. */
-  gtp_internal_set_boardsize(board_size);
-  gtp_orientation = gtp_initial_orientation;
-  gtp_set_vertex_transform_hooks(rotate_on_input, rotate_on_output);
+  // /* Inform the GTP utility functions about the board size. */
+  // gtp_internal_set_boardsize(board_size);
+  // gtp_orientation = gtp_initial_orientation;
+  // gtp_set_vertex_transform_hooks(rotate_on_input, rotate_on_output);
+  //
+  // /* Initialize time handling. */
+  // init_timers();
+  //
+  // /* Prepare pattern matcher and reading code. */
+  // reset_engine();
+  // clearstats();
+    gtp_init(DEFAULT_BOARD_SIZE, gtp_initial_orientation);
 
-  /* Initialize time handling. */
-  init_timers();
-  
-  /* Prepare pattern matcher and reading code. */
-  reset_engine();
-  clearstats();
   gtp_main_loop(commands, gtp_input, gtp_output, gtp_dump_commands);
   if (showstatistics)
     showstats();
@@ -365,8 +220,8 @@ play_gtp(FILE *gtp_input, FILE *gtp_output, FILE *gtp_dump_commands,
  *
  * Status:    GTP version 2 standard command.
  */
-static int
-gtp_quit(char *s)
+ int
+gtp_quit(const char *s)
 {
   UNUSED(s);
   gtp_success("");
@@ -381,8 +236,8 @@ gtp_quit(char *s)
  *
  * Status:    GTP version 2 standard command.
  */
-static int
-gtp_protocol_version(char *s)
+/*static*/ int 
+gtp_protocol_version(const char *s)
 {
   UNUSED(s);
   return gtp_success("%d", gtp_version);
@@ -400,8 +255,8 @@ gtp_protocol_version(char *s)
  *
  * Status:    GTP version 2 standard command.
  */
-static int
-gtp_name(char *s)
+/*static*/ int 
+gtp_name(const char *s)
 {
   UNUSED(s);
   return gtp_success("GNU Go");
@@ -417,8 +272,8 @@ gtp_name(char *s)
  *
  * Status:    GTP version 2 standard command.
  */
-static int
-gtp_program_version(char *s)
+/*static*/ int 
+gtp_program_version(const char *s)
 {
   UNUSED(s);
   return gtp_success(VERSION);
@@ -436,8 +291,8 @@ gtp_program_version(char *s)
  *
  * Status:    GTP version 2 standard command.
  */
-static int
-gtp_set_boardsize(char *s)
+/*static*/ int 
+gtp_set_boardsize(const char *s)
 {
   int boardsize;
 
@@ -469,8 +324,8 @@ gtp_set_boardsize(char *s)
  * Fails:     never
  * Returns:   board_size
  */
-static int
-gtp_query_boardsize(char *s)
+/*static*/ int 
+gtp_query_boardsize(const char *s)
 {
   UNUSED(s);
 
@@ -488,8 +343,8 @@ gtp_query_boardsize(char *s)
  *
  * Status:    GTP version 2 standard command.
  */
-static int
-gtp_clear_board(char *s)
+/*static*/ int 
+gtp_clear_board(const char *s)
 {
   UNUSED(s);
 
@@ -514,8 +369,8 @@ gtp_clear_board(char *s)
  * Fails:     illegal orientation
  * Returns:   nothing
  */
-static int
-gtp_set_orientation(char *s)
+/*static*/ int 
+gtp_set_orientation(const char *s)
 {
   int orientation;
   if (sscanf(s, "%d", &orientation) < 1)
@@ -535,8 +390,8 @@ gtp_set_orientation(char *s)
  * Fails:     never
  * Returns:   orientation
  */
-static int
-gtp_query_orientation(char *s)
+/*static*/ int 
+gtp_query_orientation(const char *s)
 {
   UNUSED(s);
 
@@ -554,8 +409,8 @@ gtp_query_orientation(char *s)
  *
  * Status:    GTP version 2 standard command.
  */
-static int
-gtp_set_komi(char *s)
+/*static*/ int 
+gtp_set_komi(const char *s)
 {
   if (sscanf(s, "%f", &komi) < 1)
     return gtp_failure("komi not a float");
@@ -573,8 +428,8 @@ gtp_set_komi(char *s)
  * Fails:     never
  * Returns:   Komi 
  */
-static int
-gtp_get_komi(char *s)
+/*static*/ int 
+gtp_get_komi(const char *s)
 {
   UNUSED(s);
   return gtp_success("%4.1f", komi);
@@ -592,8 +447,8 @@ gtp_get_komi(char *s)
  *
  * Status:    Obsolete GTP version 1 command.
  */
-static int
-gtp_playblack(char *s)
+/*static*/ int 
+gtp_playblack(const char *s)
 {
   int i, j;
   char *c;
@@ -623,8 +478,8 @@ gtp_playblack(char *s)
  *
  * Status:    Obsolete GTP version 1 command.
  */
-static int
-gtp_playwhite(char *s)
+/*static*/ int 
+gtp_playwhite(const char *s)
 {
   int i, j;
   char *c;
@@ -654,8 +509,8 @@ gtp_playwhite(char *s)
  *
  * Status:    GTP version 2 standard command.
  */
-static int
-gtp_play(char *s)
+/*static*/ int 
+gtp_play(const char *s)
 {
   int i, j;
   int color;
@@ -678,8 +533,8 @@ gtp_play(char *s)
  *
  * Status:    GTP version 2 standard command.
  */
-static int
-gtp_fixed_handicap(char *s)
+/*static*/ int 
+gtp_fixed_handicap(const char *s)
 {
   int m, n;
   int first = 1;
@@ -726,8 +581,8 @@ gtp_fixed_handicap(char *s)
  *
  * Status:    GTP version 2 standard command.
  */
-static int
-gtp_place_free_handicap(char *s)
+/*static*/ int 
+gtp_place_free_handicap(const char *s)
 {
   int m, n;
   int first = 1;
@@ -766,8 +621,8 @@ gtp_place_free_handicap(char *s)
  *
  * Status:    GTP version 2 standard command.
  */
-static int
-gtp_set_free_handicap(char *s)
+/*static*/ int 
+gtp_set_free_handicap(const char *s)
 {
   int n;
   int i, j;
@@ -808,8 +663,8 @@ gtp_set_free_handicap(char *s)
  * Fails:     never
  * Returns:   handicap
  */
-static int
-gtp_get_handicap(char *s)
+/*static*/ int 
+gtp_get_handicap(const char *s)
 {
   UNUSED(s);
   return gtp_success("%d", handicap);
@@ -824,8 +679,8 @@ gtp_get_handicap(char *s)
  *
  * Status:    GTP version 2 standard command.
  */
-static int
-gtp_loadsgf(char *s)
+/*static*/ int 
+gtp_loadsgf(const char *s)
 {
   char filename[GTP_BUFSIZE];
   char untilstring[GTP_BUFSIZE];
@@ -873,8 +728,8 @@ gtp_loadsgf(char *s)
  * Fails:     invalid vertex
  * Returns:   "black", "white", or "empty"
  */
-static int
-gtp_what_color(char *s)
+/*static*/ int 
+gtp_what_color(const char *s)
 {
   int i, j;
   if (!gtp_decode_coord(s, &i, &j))
@@ -889,8 +744,8 @@ gtp_what_color(char *s)
  * Fails:     invalid color
  * Returns:   list of vertices
  */
-static int
-gtp_list_stones(char *s)
+/*static*/ int 
+gtp_list_stones(const char *s)
 {
   int i, j;
   int color = EMPTY;
@@ -919,8 +774,8 @@ gtp_list_stones(char *s)
  * Fails:     invalid vertex, empty vertex
  * Returns:   Number of liberties.
  */
-static int
-gtp_countlib(char *s)
+/*static*/ int 
+gtp_countlib(const char *s)
 {
   int i, j;
   if (!gtp_decode_coord(s, &i, &j))
@@ -938,8 +793,8 @@ gtp_countlib(char *s)
  * Fails:     invalid vertex, empty vertex
  * Returns:   Sorted space separated list of vertices.
  */
-static int
-gtp_findlib(char *s)
+/*static*/ int 
+gtp_findlib(const char *s)
 {
   int i, j;
   int libs[MAXLIBS];
@@ -964,8 +819,8 @@ gtp_findlib(char *s)
  * Fails:     invalid color, invalid vertex, occupied vertex
  * Returns:   Sorted space separated list of liberties
  */
-static int
-gtp_accuratelib(char *s)
+/*static*/ int 
+gtp_accuratelib(const char *s)
 {
   int i, j;
   int color;
@@ -995,8 +850,8 @@ gtp_accuratelib(char *s)
  * Supposedly identical in behavior to the above function and
  * can be retired when this is confirmed.
  */
-static int
-gtp_accurate_approxlib(char *s)
+/*static*/ int 
+gtp_accurate_approxlib(const char *s)
 {
   int i, j;
   int color;
@@ -1022,8 +877,8 @@ gtp_accurate_approxlib(char *s)
  * Fails:     invalid move
  * Returns:   1 if the move is legal, 0 if it is not.
  */
-static int
-gtp_is_legal(char *s)
+/*static*/ int 
+gtp_is_legal(const char *s)
 {
   int i, j;
   int color;
@@ -1040,8 +895,8 @@ gtp_is_legal(char *s)
  * Fails:     invalid color
  * Returns:   Sorted space separated list of vertices.
  */
-static int
-gtp_all_legal(char *s)
+/*static*/ int 
+gtp_all_legal(const char *s)
 {
   int i, j;
   int color;
@@ -1055,8 +910,8 @@ gtp_all_legal(char *s)
   for (i = 0; i < board_size; i++)
     for (j = 0; j < board_size; j++)
       if (BOARD(i, j) == EMPTY && is_allowed_move(POS(i, j), color)) {
-	movei[moves] = i;
-	movej[moves++] = j;
+        movei[moves] = i;
+        movej[moves++] = j;
       }
 
   gtp_start_response(GTP_SUCCESS);
@@ -1070,8 +925,8 @@ gtp_all_legal(char *s)
  * Fails:     invalid color
  * Returns:   Number of captures.
  */
-static int
-gtp_captures(char *s)
+/*static*/ int 
+gtp_captures(const char *s)
 {
   int color;
   
@@ -1090,8 +945,8 @@ gtp_captures(char *s)
  * Fails:     no previous move known
  * Returns:   Color and vertex of last move.
  */
-static int
-gtp_last_move(char *s)
+/*static*/ int 
+gtp_last_move(const char *s)
 {
   int pos;
   int color;
@@ -1114,8 +969,8 @@ gtp_last_move(char *s)
  * Returns:   List of moves played in reverse order in format: 
  *            color move (one move per line)
  */
-static int
-gtp_move_history(char *s)
+/*static*/ int 
+gtp_move_history(const char *s)
 {
   int k, pos, color;
   UNUSED(s);
@@ -1139,8 +994,8 @@ gtp_move_history(char *s)
  * Fails:     never
  * Returns:   Invariant hash for the board as a hexadecimal number.
  */
-static int
-gtp_invariant_hash(char *s)
+/*static*/ int 
+gtp_invariant_hash(const char *s)
 {
   Hash_data hash;
   UNUSED(s);
@@ -1157,8 +1012,8 @@ gtp_invariant_hash(char *s)
  * Returns:   List of moves + invariant hash as a hexadecimal number,
  *            one pair of move + hash per line.
  */
-static int
-gtp_invariant_hash_for_moves(char *s)
+/*static*/ int 
+gtp_invariant_hash_for_moves(const char *s)
 {
   Hash_data hash;
   int color;
@@ -1198,8 +1053,8 @@ gtp_invariant_hash_for_moves(char *s)
  * Fails:     invalid color, invalid vertex, illegal move
  * Returns:   nothing
  */
-static int
-gtp_trymove(char *s)
+/*static*/ int 
+gtp_trymove(const char *s)
 {
   int i, j;
   int color;
@@ -1218,8 +1073,8 @@ gtp_trymove(char *s)
  * Fails:     invalid color, invalid vertex, illegal move
  * Returns:   nothing
  */
-static int
-gtp_tryko(char *s)
+/*static*/ int 
+gtp_tryko(const char *s)
 {
   int i, j;
   int color;
@@ -1238,8 +1093,8 @@ gtp_tryko(char *s)
  * Fails:     stack empty
  * Returns:   nothing
  */
-static int
-gtp_popgo(char *s)
+/*static*/ int 
+gtp_popgo(const char *s)
 {
   UNUSED(s);
 
@@ -1260,8 +1115,8 @@ gtp_popgo(char *s)
  * Returns:   nothing.
  */
 
-static int
-gtp_clear_cache(char *s)
+/*static*/ int 
+gtp_clear_cache(const char *s)
 {
   UNUSED(s);
   clear_persistent_caches();
@@ -1278,8 +1133,8 @@ gtp_clear_cache(char *s)
  * Fails:     invalid vertex, empty vertex
  * Returns:   attack code followed by attack point if attack code nonzero.
  */
-static int
-gtp_attack(char *s)
+/*static*/ int 
+gtp_attack(const char *s)
 {
   int i, j;
   int apos;
@@ -1309,8 +1164,8 @@ gtp_attack(char *s)
  *            exists a move which will attack one of the two
  *            with attack_code, but does not return the move.
  */
-static int
-gtp_attack_either(char *s)
+/*static*/ int 
+gtp_attack_either(const char *s)
 {
   int ai, aj;
   int bi, bj;
@@ -1344,13 +1199,13 @@ gtp_attack_either(char *s)
  * Fails:     invalid vertex, empty vertex
  * Returns:   defense code followed by defense point if defense code nonzero.
  */
-static int
-gtp_defend(char *s)
+/*static*/ int 
+gtp_defend(const char *s)
 {
   int i, j;
   int dpos;
   int defend_code;
-  
+
   if (!gtp_decode_coord(s, &i, &j))
     return gtp_failure("invalid coordinate");
 
@@ -1373,8 +1228,8 @@ gtp_defend(char *s)
  * Fails:     invalid vertex, empty vertex
  * Returns:   attack code
  */
-static int
-gtp_does_attack(char *s)
+/*static*/ int 
+gtp_does_attack(const char *s)
 {
   int i, j;
   int ti, tj;
@@ -1411,8 +1266,8 @@ gtp_does_attack(char *s)
  * Fails:     invalid vertex, empty vertex
  * Returns:   attack code
  */
-static int
-gtp_does_defend(char *s)
+/*static*/ int 
+gtp_does_defend(const char *s)
 {
   int i, j;
   int ti, tj;
@@ -1449,8 +1304,8 @@ gtp_does_defend(char *s)
  * Fails:     invalid vertex, empty vertex
  * Returns:   attack code followed by attack point if attack code nonzero.
  */
-static int
-gtp_ladder_attack(char *s)
+/*static*/ int 
+gtp_ladder_attack(const char *s)
 {
   int i, j;
   int apos;
@@ -1481,8 +1336,8 @@ gtp_ladder_attack(char *s)
  * Fails:     never
  * Returns:   nothing
  */
-static int
-gtp_increase_depths(char *s)
+/*static*/ int 
+gtp_increase_depths(const char *s)
 {
   UNUSED(s);
   increase_depth_values();
@@ -1495,8 +1350,8 @@ gtp_increase_depths(char *s)
  * Fails:     never
  * Returns:   nothing
  */
-static int
-gtp_decrease_depths(char *s)
+/*static*/ int 
+gtp_decrease_depths(const char *s)
 {
   UNUSED(s);
   decrease_depth_values();
@@ -1513,8 +1368,8 @@ gtp_decrease_depths(char *s)
  * Fails:     invalid vertex, empty vertex
  * Returns:   attack code followed by attack point if attack code nonzero.
  */
-static int
-gtp_owl_attack(char *s)
+/*static*/ int 
+gtp_owl_attack(const char *s)
 {
   int i, j;
   int attack_point;
@@ -1548,8 +1403,8 @@ gtp_owl_attack(char *s)
  * Fails:     invalid vertex, empty vertex
  * Returns:   defense code followed by defense point if defense code nonzero.
  */
-static int
-gtp_owl_defend(char *s)
+/*static*/ int 
+gtp_owl_defend(const char *s)
 {
   int i, j;
   int defense_point;
@@ -1583,8 +1438,8 @@ gtp_owl_defend(char *s)
  * Returns:   attack code followed by the two attack points if
  *            attack code nonzero.
  */
-static int
-gtp_owl_threaten_attack(char *s)
+/*static*/ int 
+gtp_owl_threaten_attack(const char *s)
 {
   int i, j;
   int attack_point1;
@@ -1618,8 +1473,8 @@ gtp_owl_threaten_attack(char *s)
  * Returns:   defense code followed by the 2 defense points if
  *            defense code nonzero.
  */
-static int
-gtp_owl_threaten_defense(char *s)
+/*static*/ int 
+gtp_owl_threaten_defense(const char *s)
 {
   int i, j;
   int defense_point1;
@@ -1653,8 +1508,8 @@ gtp_owl_threaten_defense(char *s)
  * Fails:     invalid vertex, empty vertex
  * Returns:   attack code
  */
-static int
-gtp_owl_does_attack(char *s)
+/*static*/ int 
+gtp_owl_does_attack(const char *s)
 {
   int i, j;
   int ti, tj;
@@ -1690,8 +1545,8 @@ gtp_owl_does_attack(char *s)
  * Fails:     invalid vertex, empty vertex
  * Returns:   defense code
  */
-static int
-gtp_owl_does_defend(char *s)
+/*static*/ int 
+gtp_owl_does_defend(const char *s)
 {
   int i, j;
   int ti, tj;
@@ -1727,8 +1582,8 @@ gtp_owl_does_defend(char *s)
  * Fails:     invalid vertex, empty vertex
  * Returns:   defense code
  */
-static int
-gtp_owl_connection_defends(char *s)
+/*static*/ int 
+gtp_owl_connection_defends(const char *s)
 {
   int ai, aj;
   int bi, bj;
@@ -1775,8 +1630,8 @@ gtp_owl_connection_defends(char *s)
  *            exists a move which will defend both of the two
  *            with defend_code, but does not return the move.
  */
-static int
-gtp_defend_both(char *s)
+/*static*/ int 
+gtp_defend_both(const char *s)
 {
   int ai, aj;
   int bi, bj;
@@ -1811,8 +1666,8 @@ gtp_defend_both(char *s)
  * Fails:     invalid vertex, empty vertex
  * Returns:   1 if dragon can live, 0 otherwise
  */
-static int
-gtp_owl_substantial(char *s)
+/*static*/ int 
+gtp_owl_substantial(const char *s)
 {
   int i, j;
   int result;
@@ -1835,8 +1690,8 @@ gtp_owl_substantial(char *s)
  * Fails:     invalid vertices, empty vertices
  * Returns:   semeai defense result, semeai attack result, semeai move
  */
-static int
-gtp_analyze_semeai(char *s)
+/*static*/ int 
+gtp_analyze_semeai(const char *s)
 {
   int i, j;
   int k;
@@ -1878,8 +1733,8 @@ gtp_analyze_semeai(char *s)
  * Fails:     invalid vertices
  * Returns:   semeai defense result, semeai attack result, semeai move
  */
-static int
-gtp_analyze_semeai_after_move(char *s)
+/*static*/ int 
+gtp_analyze_semeai_after_move(const char *s)
 {
   int i, j;
   int color;
@@ -1936,8 +1791,8 @@ gtp_analyze_semeai_after_move(char *s)
  * Fails:     invalid vertex, empty vertex, vertices of different colors
  * Returns:   connect result followed by connect point if successful.
  */
-static int
-gtp_connect(char *s)
+/*static*/ int 
+gtp_connect(const char *s)
 {
   int ai, aj;
   int bi, bj;
@@ -1973,8 +1828,8 @@ gtp_connect(char *s)
  * Fails:     invalid vertex, empty vertex, vertices of different colors
  * Returns:   disconnect result followed by disconnect point if successful.
  */
-static int
-gtp_disconnect(char *s)
+/*static*/ int 
+gtp_disconnect(const char *s)
 {
   int ai, aj;
   int bi, bj;
@@ -2010,8 +1865,8 @@ gtp_disconnect(char *s)
  * Fails:     invalid vertex, empty vertex.
  * Returns:   result followed by break in point if successful.
  */
-static int
-gtp_break_in(char *s)
+/*static*/ int 
+gtp_break_in(const char *s)
 {
   int ai, aj;
   int i, j;
@@ -2057,8 +1912,8 @@ gtp_break_in(char *s)
  * Fails:     invalid vertex, empty vertex.
  * Returns:   result followed by block point if successful.
  */
-static int
-gtp_block_off(char *s)
+/*static*/ int 
+gtp_block_off(const char *s)
 {
   int ai, aj;
   int i, j;
@@ -2114,8 +1969,8 @@ gtp_block_off(char *s)
  *            a single -1 is returned.
  */
 
-static int
-gtp_eval_eye(char *s)
+/*static*/ int 
+gtp_eval_eye(const char *s)
 {
   int m, n;
   struct eyevalue value;
@@ -2171,8 +2026,8 @@ gtp_eval_eye(char *s)
  *        and independent life. Should also be able to identify ko.
  */
 
-static int
-gtp_dragon_status(char *s)
+/*static*/ int 
+gtp_dragon_status(const char *s)
 {
   int i, j;
   int str = NO_MOVE;
@@ -2234,8 +2089,8 @@ gtp_dragon_status(char *s)
  * Returns:   1 if the vertices belong to the same dragon, 0 otherwise
  */
 
-static int
-gtp_same_dragon(char *s)
+/*static*/ int 
+gtp_same_dragon(const char *s)
 {
   int ai, aj;
   int bi, bj;
@@ -2270,8 +2125,8 @@ gtp_same_dragon(char *s)
  *            undecided, white territory, or black territory.
  */
 
-static int
-gtp_unconditional_status(char *s)
+/*static*/ int 
+gtp_unconditional_status(const char *s)
 {
   int i, j;
   enum dragon_status status;
@@ -2299,8 +2154,8 @@ gtp_unconditional_status(char *s)
  * Returns:   Recommended move, PASS if no move found
  */
 
-static int
-gtp_combination_attack(char *s)
+/*static*/ int 
+gtp_combination_attack(const char *s)
 {
   int color;
   int attack_point;
@@ -2328,8 +2183,8 @@ gtp_combination_attack(char *s)
  * Returns:   Recommended moves, PASS if no combination attack found.
  */
 
-static int
-gtp_combination_defend(char *s)
+/*static*/ int 
+gtp_combination_defend(const char *s)
 {
   int color;
   signed char defense_points[BOARDMAX];
@@ -2366,8 +2221,8 @@ gtp_combination_defend(char *s)
  * Returns:   success code, if failure also defending move
  */
 
-static int
-gtp_aa_confirm_safety(char *s)
+/*static*/ int 
+gtp_aa_confirm_safety(const char *s)
 {
   int color;
   int i, j;
@@ -2416,8 +2271,8 @@ gtp_aa_confirm_safety(char *s)
  *
  * Status:    Obsolete GTP version 1 command.
  */
-static int
-gtp_genmove_black(char *s)
+/*static*/ int 
+gtp_genmove_black(const char *s)
 {
   int move;
   UNUSED(s);
@@ -2441,8 +2296,8 @@ gtp_genmove_black(char *s)
  *
  * Status:    Obsolete GTP version 1 command.
  */
-static int
-gtp_genmove_white(char *s)
+/*static*/ int 
+gtp_genmove_white(const char *s)
 {
   int move;
   UNUSED(s);
@@ -2466,8 +2321,8 @@ gtp_genmove_white(char *s)
  *
  * Status:    GTP version 2 standard command.
  */
-static int
-gtp_genmove(char *s)
+/*static*/ int 
+gtp_genmove(const char *s)
 {
   int move;
   int resign;
@@ -2502,8 +2357,8 @@ gtp_genmove(char *s)
  *
  * Status:    GTP version 2 standard command.
  */
-static int
-gtp_reg_genmove(char *s)
+/*static*/ int 
+gtp_reg_genmove(const char *s)
 {
   int move;
   int color;
@@ -2539,8 +2394,8 @@ gtp_reg_genmove(char *s)
  *
  * This differs from reg_genmove in the optional random seed.
  */
-static int
-gtp_gg_genmove(char *s)
+/*static*/ int 
+gtp_gg_genmove(const char *s)
 {
   int move;
   int color;
@@ -2579,8 +2434,8 @@ gtp_gg_genmove(char *s)
  * Fails:     invalid color, invalid vertex, no vertex listed
  * Returns:   a move coordinate (or "PASS")
  */
-static int
-gtp_restricted_genmove(char *s)
+/*static*/ int 
+gtp_restricted_genmove(const char *s)
 {
   int move;
   int i, j;
@@ -2641,8 +2496,8 @@ gtp_restricted_genmove(char *s)
  * A similar command, but possibly somewhat different, will likely be added
  * to GTP version 3 at a later time.
  */
-static int
-gtp_kgs_genmove_cleanup(char *s)
+/*static*/ int 
+gtp_kgs_genmove_cleanup(const char *s)
 {
   int move;
   int color;
@@ -2680,8 +2535,8 @@ gtp_kgs_genmove_cleanup(char *s)
  * Returns  : list of move reasons (may be empty)
  */
 
-static int
-gtp_move_reasons(char *s)
+/*static*/ int 
+gtp_move_reasons(const char *s)
 {
   int i, j;
   if (!gtp_decode_coord(s, &i, &j))
@@ -2706,8 +2561,8 @@ gtp_move_reasons(char *s)
  * Returns  : list of moves with values
  */
 
-static int
-gtp_all_move_values(char *s)
+/*static*/ int 
+gtp_all_move_values(const char *s)
 {
   UNUSED(s);
   gtp_start_response(GTP_SUCCESS);
@@ -2726,8 +2581,8 @@ gtp_all_move_values(char *s)
  */
 
 /* FIXME: Don't we want the moves one per row? */
-static int
-gtp_top_moves(char *s)
+/*static*/ int 
+gtp_top_moves(const char *s)
 {
   int k;
   UNUSED(s);
@@ -2747,8 +2602,8 @@ gtp_top_moves(char *s)
  * Returns  : list of moves with weights
  */
 
-static int
-gtp_top_moves_white(char *s)
+/*static*/ int 
+gtp_top_moves_white(const char *s)
 {
   int k;
   UNUSED(s);
@@ -2768,8 +2623,8 @@ gtp_top_moves_white(char *s)
  * Returns  : list of moves with weights
  */
 
-static int
-gtp_top_moves_black(char *s)
+/*static*/ int 
+gtp_top_moves_black(const char *s)
 {
   int k;
   UNUSED(s);
@@ -2790,8 +2645,8 @@ gtp_top_moves_black(char *s)
  * Fails:     incorrect argument
  * Returns:   nothing
  */
-static int
-gtp_set_level(char *s)
+/*static*/ int 
+gtp_set_level(const char *s)
 {
   int new_level;
   if (sscanf(s, "%d", &new_level) < 1)
@@ -2809,8 +2664,8 @@ gtp_set_level(char *s)
  * Status:    GTP version 2 standard command.
  */
 
-static int
-gtp_undo(char *s)
+/*static*/ int 
+gtp_undo(const char *s)
 {
   UNUSED(s);
 
@@ -2829,8 +2684,8 @@ gtp_undo(char *s)
  * Returns:   nothing
  */
 
-static int
-gtp_gg_undo(char *s)
+/*static*/ int 
+gtp_gg_undo(const char *s)
 {
   int number_moves = 1;
 
@@ -2860,8 +2715,8 @@ gtp_gg_undo(char *s)
  * Status:    GTP version 2 standard command.
  */
 
-static int
-gtp_time_settings(char *s)
+/*static*/ int 
+gtp_time_settings(const char *s)
 {
   int main_time, byoyomi_time, byoyomi_stones;
   
@@ -2881,8 +2736,8 @@ gtp_time_settings(char *s)
  * Status:    GTP version 2 standard command.
  */
 
-static int
-gtp_time_left(char *s)
+/*static*/ int 
+gtp_time_left(const char *s)
 {
   int color;
   int time;
@@ -3032,8 +2887,8 @@ finish_and_score_game(int seed)
  *
  * Status:    GTP version 2 standard command.
  */
-static int
-gtp_final_score(char *s)
+/*static*/ int 
+gtp_final_score(const char *s)
 {
   unsigned int saved_random_seed = get_random_seed();
   int seed;
@@ -3068,8 +2923,8 @@ gtp_final_score(char *s)
  * Returns:   Status in the form of one of the strings "alive", "dead",
  *            "seki", "white_territory", "black_territory", or "dame".
  */
-static int
-gtp_final_status(char *s)
+/*static*/ int 
+gtp_final_status(const char *s)
 {
   int seed;
   int n;
@@ -3119,8 +2974,8 @@ gtp_final_status(char *s)
  *            However, "dame", "white_territory", and "black_territory"
  *            are private extensions.
  */
-static int
-gtp_final_status_list(char *s)
+/*static*/ int 
+gtp_final_status_list(const char *s)
 {
   int seed;
   int n;
@@ -3193,8 +3048,8 @@ gtp_final_status_list(char *s)
  * Returns:   upper and lower bounds for the score
  */
 
-static int
-gtp_estimate_score(char *s)
+/*static*/ int 
+gtp_estimate_score(const char *s)
 {
   float score;
   float upper_bound, lower_bound;
@@ -3224,8 +3079,8 @@ gtp_estimate_score(char *s)
  * in the value of the move generated.
  */
 
-static int
-gtp_experimental_score(char *s)
+/*static*/ int 
+gtp_experimental_score(const char *s)
 {
   float upper_bound, lower_bound, score;
   int color;
@@ -3261,8 +3116,8 @@ gtp_experimental_score(char *s)
  * Note: This function is obsolete and only remains for backwards
  * compatibility.
  */
-static int
-gtp_reset_life_node_counter(char *s)
+/*static*/ int 
+gtp_reset_life_node_counter(const char *s)
 {
   UNUSED(s);
   return gtp_success("");
@@ -3277,8 +3132,8 @@ gtp_reset_life_node_counter(char *s)
  * Note: This function is obsolete and only remains for backwards
  * compatibility.
  */
-static int
-gtp_get_life_node_counter(char *s)
+/*static*/ int 
+gtp_get_life_node_counter(const char *s)
 {
   UNUSED(s);
   return gtp_success("0");
@@ -3290,8 +3145,8 @@ gtp_get_life_node_counter(char *s)
  * Fails:     never
  * Returns:   nothing
  */
-static int
-gtp_reset_owl_node_counter(char *s)
+/*static*/ int 
+gtp_reset_owl_node_counter(const char *s)
 {
   UNUSED(s);
   reset_owl_node_counter();
@@ -3304,8 +3159,8 @@ gtp_reset_owl_node_counter(char *s)
  * Fails:     never
  * Returns:   number of owl nodes
  */
-static int
-gtp_get_owl_node_counter(char *s)
+/*static*/ int 
+gtp_get_owl_node_counter(const char *s)
 {
   int nodes = get_owl_node_counter();
   UNUSED(s);
@@ -3318,8 +3173,8 @@ gtp_get_owl_node_counter(char *s)
  * Fails:     never
  * Returns:   nothing
  */
-static int
-gtp_reset_reading_node_counter(char *s)
+/*static*/ int 
+gtp_reset_reading_node_counter(const char *s)
 {
   UNUSED(s);
   reset_reading_node_counter();
@@ -3332,8 +3187,8 @@ gtp_reset_reading_node_counter(char *s)
  * Fails:     never
  * Returns:   number of reading nodes
  */
-static int
-gtp_get_reading_node_counter(char *s)
+/*static*/ int 
+gtp_get_reading_node_counter(const char *s)
 {
   int nodes = get_reading_node_counter();
   UNUSED(s);
@@ -3346,8 +3201,8 @@ gtp_get_reading_node_counter(char *s)
  * Fails:     never
  * Returns:   nothing
  */
-static int
-gtp_reset_trymove_counter(char *s)
+/*static*/ int 
+gtp_reset_trymove_counter(const char *s)
 {
   UNUSED(s);
   reset_trymove_counter();
@@ -3360,8 +3215,8 @@ gtp_reset_trymove_counter(char *s)
  * Fails:     never
  * Returns:   number of trymoves/trykos
  */
-static int
-gtp_get_trymove_counter(char *s)
+/*static*/ int 
+gtp_get_trymove_counter(const char *s)
 {
   int nodes = get_trymove_counter();
   UNUSED(s);
@@ -3374,8 +3229,8 @@ gtp_get_trymove_counter(char *s)
  * Fails:     never
  * Returns:   nothing
  */
-static int
-gtp_reset_connection_node_counter(char *s)
+/*static*/ int 
+gtp_reset_connection_node_counter(const char *s)
 {
   UNUSED(s);
   reset_connection_node_counter();
@@ -3388,8 +3243,8 @@ gtp_reset_connection_node_counter(char *s)
  * Fails:     never
  * Returns:   number of connection nodes
  */
-static int
-gtp_get_connection_node_counter(char *s)
+/*static*/ int 
+gtp_get_connection_node_counter(const char *s)
 {
   int nodes = get_connection_node_counter();
   UNUSED(s);
@@ -3408,8 +3263,8 @@ gtp_get_connection_node_counter(char *s)
  * Fails:     Bad vertices
  * Returns:   Failure reports on stderr.
  */
-static int
-gtp_test_eyeshape(char *s)
+/*static*/ int 
+gtp_test_eyeshape(const char *s)
 {
   int n;
   int i, j;
@@ -3438,8 +3293,8 @@ gtp_test_eyeshape(char *s)
  * Fails:     Bad eyeshape, analysis failed
  * Returns:   Eyevalue, vital points
  */
-static int
-gtp_analyze_eyegraph(char *s)
+/*static*/ int 
+gtp_analyze_eyegraph(const char *s)
 {
   struct eyevalue value;
   int outer_liberties;
@@ -3469,8 +3324,8 @@ gtp_analyze_eyegraph(char *s)
  * Fails:     never
  * Returns:   Total elapsed (user + system) CPU time in seconds.
  */
-static int
-gtp_cputime(char *s)
+/*static*/ int 
+gtp_cputime(const char *s)
 {
   UNUSED(s);
   return gtp_success("%.3f", gg_cputime());
@@ -3485,8 +3340,8 @@ gtp_cputime(char *s)
  *
  * Status:    GTP version 2 standard command.
  */
-static int
-gtp_showboard(char *s)
+/*static*/ int 
+gtp_showboard(const char *s)
 {
   UNUSED(s);
   
@@ -3502,8 +3357,8 @@ gtp_showboard(char *s)
  * Fails:     never
  * Returns:   nothing
  */
-static int
-gtp_dump_stack(char *s)
+/*static*/ int 
+gtp_dump_stack(const char *s)
 {
   UNUSED(s);
   dump_stack();
@@ -3511,13 +3366,13 @@ gtp_dump_stack(char *s)
 }
 
 /* Determine whether a string starts with a specific substring. */
-static int
+/*static*/ int 
 has_prefix(const char *s, const char *prefix)
 {
   return strncmp(s, prefix, strlen(prefix)) == 0;
 }
 
-static int
+/*static*/ int 
 print_influence_data(struct influence_data *q, char *what_data)
 {
   float white_influence[BOARDMAX];
@@ -3623,8 +3478,8 @@ print_influence_data(struct influence_data *q, char *what_data)
  * -3 black territory
  * -4 black stone
  */
-static int
-gtp_initial_influence(char *s)
+/*static*/ int 
+gtp_initial_influence(const char *s)
 {
   int color;
   struct influence_data *q;
@@ -3647,8 +3502,8 @@ gtp_initial_influence(char *s)
  * Fails:     never
  * Returns:   Influence data formatted like for initial_influence.
  */
-static int
-gtp_move_influence(char *s)
+/*static*/ int 
+gtp_move_influence(const char *s)
 {
   int color;
   int i, j;
@@ -3671,8 +3526,8 @@ gtp_move_influence(char *s)
  * Fails:     never
  * Returns:   Move, probabilty pairs, one per row.
  */
-static int
-gtp_move_probabilities(char *s)
+/*static*/ int 
+gtp_move_probabilities(const char *s)
 {
   float probabilities[BOARDMAX];
   int pos;
@@ -3706,8 +3561,8 @@ gtp_move_probabilities(char *s)
  * Fails:     never
  * Returns:   bits of uncertainty
  */
-static int
-gtp_move_uncertainty(char *s)
+/*static*/ int 
+gtp_move_uncertainty(const char *s)
 {
   float probabilities[BOARDMAX];
   int pos;
@@ -3738,8 +3593,8 @@ gtp_move_uncertainty(char *s)
  * Fails:     never
  * Returns:   Influence data formatted like for initial_influence.
  */
-static int
-gtp_followup_influence(char *s)
+/*static*/ int 
+gtp_followup_influence(const char *s)
 {
   int color;
   int i, j;
@@ -3789,8 +3644,8 @@ gtp_followup_influence(char *s)
  *
  * If an intersection is specified, only data for this one will be returned.
  */
-static int
-gtp_worm_data(char *s)
+/*static*/ int 
+gtp_worm_data(const char *s)
 {
   int i = -1;
   int j = -1;
@@ -3843,8 +3698,8 @@ gtp_worm_data(char *s)
  * Fails:     if called on an empty or off-board location
  * Returns:   list of stones
  */
-static int
-gtp_worm_stones(char *s)
+/*static*/ int 
+gtp_worm_stones(const char *s)
 {
   int i = -1;
   int j = -1;
@@ -3896,8 +3751,8 @@ gtp_worm_stones(char *s)
  * Fails:     never
  * Returns:   cutstone
  */
-static int
-gtp_worm_cutstone(char *s)
+/*static*/ int 
+gtp_worm_cutstone(const char *s)
 {
 
   int i, j;
@@ -3917,8 +3772,8 @@ gtp_worm_cutstone(char *s)
  * Fails:     never
  * Returns:   Dragon data formatted in the corresponding way to gtp_worm_data.
  */
-static int
-gtp_dragon_data(char *s)
+/*static*/ int 
+gtp_dragon_data(const char *s)
 {
   int i = -1;
   int j = -1;
@@ -3962,8 +3817,8 @@ gtp_dragon_data(char *s)
  * Fails:     if called on an empty or off-board location
  * Returns:   list of stones
  */
-static int
-gtp_dragon_stones(char *s)
+/*static*/ int 
+gtp_dragon_stones(const char *s)
 {
   int i = -1;
   int j = -1;
@@ -4010,8 +3865,8 @@ gtp_dragon_stones(char *s)
  * Fails:     never
  * Returns:   eye data fields and values, one pair per row
  */
-static int
-gtp_eye_data(char *s)
+/*static*/ int 
+gtp_eye_data(const char *s)
 {
   int color = EMPTY;
   int i = -1;
@@ -4052,8 +3907,8 @@ gtp_eye_data(char *s)
  * Fails:     never
  * Returns:   half eye data fields and values, one pair per row
  */
-static int
-gtp_half_eye_data(char *s)
+/*static*/ int 
+gtp_half_eye_data(const char *s)
 {
   int i = -1;
   int j = -1;
@@ -4104,8 +3959,8 @@ static SGFTree gtp_sgftree;
  * Warning: You had better know what you're doing if you try to use this
  *          command.
  */
-static int
-gtp_start_sgftrace(char *s)
+/*static*/ int 
+gtp_start_sgftrace(const char *s)
 {
   UNUSED(s);
   sgffile_begindump(&gtp_sgftree);
@@ -4122,8 +3977,8 @@ gtp_start_sgftrace(char *s)
  * Warning: You had better know what you're doing if you try to use this
  *          command.
  */
-static int
-gtp_finish_sgftrace(char *s)
+/*static*/ int 
+gtp_finish_sgftrace(const char *s)
 {
   char filename[GTP_BUFSIZE];
   int nread;
@@ -4144,8 +3999,8 @@ gtp_finish_sgftrace(char *s)
  * Fails:     never
  * Returns:   nothing if filename, otherwise the sgf
  */
-static int
-gtp_printsgf(char *s)
+/*static*/ int 
+gtp_printsgf(const char *s)
 {
   char filename[GTP_BUFSIZE];
   int nread;
@@ -4180,8 +4035,8 @@ gtp_printsgf(char *s)
  * Fails:     incorrect arguments
  * Returns:   nothing
  */
-static int
-gtp_tune_move_ordering(char *s)
+/*static*/ int 
+gtp_tune_move_ordering(const char *s)
 {
   int params[MOVE_ORDERING_PARAMETERS];
   int k;
@@ -4205,8 +4060,8 @@ gtp_tune_move_ordering(char *s)
  * Fails:     never
  * Returns:   nothing
  */
-static int
-gtp_echo(char *s)
+/*static*/ int 
+gtp_echo(const char *s)
 {
   return gtp_success("%s", s);
 }
@@ -4217,8 +4072,8 @@ gtp_echo(char *s)
  * Fails:     never
  * Returns:   nothing
  */
-static int
-gtp_echo_err(char *s)
+/*static*/ int 
+gtp_echo_err(const char *s)
 {
   fprintf(stderr, "%s", s);
   fflush(gtp_output_file);
@@ -4233,8 +4088,8 @@ gtp_echo_err(char *s)
  *
  * Status:    GTP version 2 standard command.
  */
-static int
-gtp_list_commands(char *s)
+/*static*/ int 
+gtp_list_commands(const char *s)
 {
   int k;
   UNUSED(s);
@@ -4256,8 +4111,8 @@ gtp_list_commands(char *s)
  *
  * Status:    GTP version 2 standard command.
  */
-static int
-gtp_known_command(char *s)
+/*static*/ int 
+gtp_known_command(const char *s)
 {
   int k;
   char command[GTP_BUFSIZE];
@@ -4278,8 +4133,8 @@ gtp_known_command(char *s)
  * Fails:     invalid argument
  * Returns:   nothing
  */
-static int
-gtp_report_uncertainty(char *s)
+/*static*/ int 
+gtp_report_uncertainty(const char *s)
 {
   if (!strncmp(s, "on", 2)) {
     report_uncertainty = 1;
@@ -4326,13 +4181,13 @@ gtp_print_vertices2(int n, int *moves)
  * transform *
  *************/
 
-static void
+void
 rotate_on_input(int ai, int aj, int *bi, int *bj)
 {
   rotate(ai, aj, bi, bj, board_size, gtp_orientation);
 }
 
-static void
+void
 rotate_on_output(int ai, int aj, int *bi, int *bj)
 {
   inv_rotate(ai, aj, bi, bj, board_size, gtp_orientation);
@@ -4348,8 +4203,8 @@ rotate_on_output(int ai, int aj, int *bi, int *bj)
  * Fails:     never
  * Returns:   random seed
  */
-static int
-gtp_get_random_seed(char *s)
+/*static*/ int 
+gtp_get_random_seed(const char *s)
 {
   UNUSED(s);
   return gtp_success("%d", get_random_seed());
@@ -4360,8 +4215,8 @@ gtp_get_random_seed(char *s)
  * Fails:     invalid data
  * Returns:   nothing
  */
-static int
-gtp_set_random_seed(char *s)
+/*static*/ int 
+gtp_set_random_seed(const char *s)
 {
   int seed;
   if (sscanf(s, "%d", &seed) < 1)
@@ -4377,8 +4232,8 @@ gtp_set_random_seed(char *s)
  * Fails:     invalid data
  * Returns:   New random seed.
  */
-static int
-gtp_advance_random_seed(char *s)
+/*static*/ int 
+gtp_advance_random_seed(const char *s)
 {
   int i;
   int games;
@@ -4401,8 +4256,8 @@ gtp_advance_random_seed(char *s)
  * Fails:     invalid vertex, empty vertex
  * Returns:   1 if surrounded, 2 if weakly surrounded, 0 if not
  */
-static int
-gtp_is_surrounded(char *s)
+/*static*/ int 
+gtp_is_surrounded(const char *s)
 {
   int i, j;
   int n;
@@ -4423,8 +4278,8 @@ gtp_is_surrounded(char *s)
  * Fails:     invalid vertex, empty (dragon, nonempty (move)
  * Returns:   1 if (move) surrounds (dragon)
  */
-static int
-gtp_does_surround(char *s)
+/*static*/ int 
+gtp_does_surround(const char *s)
 {
   int si, sj, di, dj;
   int n;
@@ -4454,8 +4309,8 @@ gtp_does_surround(char *s)
  *            dragon not surrounded.
  */
 
-static int
-gtp_surround_map(char *s)
+/*static*/ int 
+gtp_surround_map(const char *s)
 {
   int di, dj, mi, mj;
   int n;
@@ -4484,8 +4339,8 @@ gtp_surround_map(char *s)
  * Fails:     invalid value
  * Returns:   nothing
  */
-static int
-gtp_set_search_diamond(char *s)
+/*static*/ int 
+gtp_set_search_diamond(const char *s)
 {
   int i, j;
 
@@ -4502,8 +4357,8 @@ gtp_set_search_diamond(char *s)
  * Fails:     never
  * Returns:   nothing
  */
-static int
-gtp_reset_search_mask(char *s)
+/*static*/ int 
+gtp_reset_search_mask(const char *s)
 {
   UNUSED(s);
 
@@ -4516,8 +4371,8 @@ gtp_reset_search_mask(char *s)
  * Fails:     invalid arguments
  * Returns:   nothing
  */
-static int
-gtp_limit_search(char *s)
+/*static*/ int 
+gtp_limit_search(const char *s)
 {
   int value;
 
@@ -4532,8 +4387,8 @@ gtp_limit_search(char *s)
  * Fails:     invalid arguments
  * Returns:   nothing
  */
-static int
-gtp_set_search_limit(char *s)
+/*static*/ int 
+gtp_set_search_limit(const char *s)
 {
   int i, j;
 
@@ -4547,8 +4402,8 @@ gtp_set_search_limit(char *s)
  * Fails:     never
  * Returns:   nothing
  */
-static int
-gtp_draw_search_area(char *s)
+/*static*/ int 
+gtp_draw_search_area(const char *s)
 {
   UNUSED(s);
 

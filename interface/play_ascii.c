@@ -188,7 +188,7 @@ set_handicap_spots(int boardsize)
  * Display the board position when playing in ASCII.
  */
 
-static void
+/*static */void
 ascii_showboard(void)
 {
   int i, j;
@@ -442,12 +442,14 @@ get_command(char *command)
  * Write sgf root node. 
  */
 
-static void
+/*static */void
 init_sgf(Gameinfo *ginfo)
 {
   if (sgf_initialized)
     return;
   sgf_initialized = 1;
+
+    sgftree = ginfo->game_record;
 
   sgf_write_header(sgftree.root, 1, get_random_seed(), komi,
       		   ginfo->handicap, get_level(), chinese_rules);
@@ -460,7 +462,7 @@ init_sgf(Gameinfo *ginfo)
  * Generate the computer move. 
  */
 
-static int
+/*static*/ int
 computer_move(Gameinfo *gameinfo, int *passes)
 {
   int move;
@@ -583,7 +585,7 @@ do_pass(Gameinfo *gameinfo, int *passes, int force)
  */
 
 void
-play_ascii(SGFTree *tree, Gameinfo *gameinfo, char *filename, char *until)
+play_ascii(SGFTree *tree, Gameinfo *gameinfo, const char *filename, const char *until)
 {
   int sz;
   
@@ -658,7 +660,7 @@ do_play_ascii(Gameinfo *gameinfo)
     while (state == 0) {
       /* Display game board. */
       if (opt_showboard)
-	ascii_showboard();
+	    ascii_showboard();
 
 #if !READLINE
       /* Print the prompt */

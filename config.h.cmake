@@ -29,7 +29,7 @@
 #define LARGE_SCALE 0
 
 /* Oracle. Default not enabled. */
-#define ORACLE 0
+#define ORACLE 1
 
 /* Owl Threats. 0 standard. */
 #define OWL_THREATS 0
